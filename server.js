@@ -259,45 +259,35 @@ app.get('/webhook', (req, res) => {
 // Webhook to receive messages
 app.post('/webhook', async (req, res) => {
   const data = req.body;
-  
-  // Quickly respond to Facebook
-  res.status(200).send('EVENT_RECEIVED');
-  
+
   if (data.object === 'page') {
     for (const entry of data.entry) {
       for (const event of entry.messaging) {
         const senderId = event.sender.id;
-        
+
         if (event.message && event.message.text) {
           const messageText = event.message.text;
-          console.log(`📨 Received message from ${senderId}: ${messageText}`);
-          
+
           try {
-            // Show typing indicator
             await sendTypingIndicator(senderId, true);
-            
-            // Generate AI response using RAG
-            const response = await generateResponse(messageText);
-            
-            // Turn off typing indicator
+            const reply = await generateResponse(messageText);
             await sendTypingIndicator(senderId, false);
-            
-            // Send response
-            await sendMessage(senderId, response);
-            console.log(`✅ Sent response: ${response}`);
-            
+
+            await sendMessage(senderId, reply);
+
           } catch (error) {
-            console.error('❌ Error handling message:', error);
-            await sendMessage(
-              senderId, 
-              "Sorry, I encountered an error. Please leave us a message and we'll get back to you soon, In Sha Allah!"
-            );
+            console.error("Error:", error);
+            await sendMessage(senderId, "Sorry, something went wrong.");
           }
         }
       }
     }
   }
+
+  // respond only after completing everything
+  return res.sendStatus(200);
 });
+
 
 // Health check endpoint
 app.get('/', (req, res) => {
